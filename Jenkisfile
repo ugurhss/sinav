@@ -1,0 +1,58 @@
+pipeline {
+    agent any
+
+    triggers {
+        githubPush()
+    }
+
+    environment {
+        
+        resim_isim = "ugurcanjenkisresim"
+        container_isim = "ugurcanjenkiscontainer"
+    }
+
+    stages {
+        stage('depoyu klonla') {
+            steps {
+                echo "gitHub klonu yapıldı"
+                git url: 'https://github.com/ugurhss/dockerprojem.git', branch: 'main'
+            }
+        }
+
+        stage('docker ımage ') {
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    echo "docker image oluşturuluyor"
+                    sh "docker build -t ${resim_isim} ."
+                }
+            }
+        }
+
+        stage('docker container ') {
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    echo "Eski Docker container siliniyor (varsa)"
+                    sh "docker rm -f ${container_isim} || true"
+                }
+            }
+        }
+
+        stage('yeni docker container calıştır') {
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    echo "Yeni Docker container başlatılıyor"
+                    sh "docker run -d --name ${container_isim} -p 5050:80 ${resim_isim}"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "yayınlama başarılı"
+        }
+        failure {
+            echo "hata oluştu"
+        }
+    }
+}
